@@ -19,6 +19,18 @@ tmpfile_commit_message=.last-commit~
 tmpfile_commit_status=$(mktemp -u "/tmp/commit-status.XXXXXXXXXXXXXXX")
 $scm status >> $tmpfile_commit_status
 
+parse_status() {
+    status_file=$1
+
+    cat $status_file | \
+        grep -E "+modified:|+new file:|+deleted:|+renamed:|\+:.*" | \
+        sed 's#\(.*\)->\(.*\)#\# renamed:\1\n\# renamed:\2#g' | \
+        sed 's/.*:\s*\(.*\)$/"\1";/g;' | \
+        xargs -I';' echo 
+}
+
+main() {
+
 # load diff, status and commit message in vim
 vim -c "e $tmpfile_diff" -c vs -c "e $tmpfile_commit_status" -c 0 -c sp -c "e $tmpfile_commit_message"
 
@@ -29,18 +41,23 @@ then
   #scm=echo
 
   # here we add all the files marqued as + instead of ?
-  cat $tmpfile_commit_status | grep -E "\+\s*+.*" | sed 's#\S\s*\(.*\)$#\1#g;' | xargs -I'{}' $scm add '{}'
+  cat $tmpfile_commit_status | \
+      grep -E "\+\s*+.*" | \
+      sed 's#\S\s*\(.*\)$#\1#g;' | \
+      xargs -I'{}' $scm add '{}'
 
   # now we launch the commit operation for every file marqued with 
   # D, A, M or +, then if the commit is successful we delete the 
   # message file
-  # TODO for the rename we have to delete the old one afater, the fix would be to test with an expression like this:
-  # sed 's#\(.*)->\(.*\)#\# oldname:\1\n\#renamed:\2#g'
-  # TODO this huge command would lay nicely on many lines
-  $scm commit -F $tmpfile_commit_message $(cat $tmpfile_commit_status | sed 's/\+\s*\(.*\)\(->.*\)\{1\}$/\+:\1/g' | grep -E "+modified:|+new file:|+deleted:|+renamed:|\+:.*" | sed 's#.*->\(.*\)#\# renamed:\1#g' | sed 's/.*:\s*\(.*\)$/\1/g;' | sed -n '1,$H; $x; $s/\n/ /gp') && rm $tmpfile_commit_message
+  parse_status $tmpfile_commit_status
+  $scm commit -F $tmpfile_commit_message \
+      $( parse_status $tmpfile_commit_status ) \
+       && rm $tmpfile_commit_message
 else
   # abord commit
   echo "Commit aborded - The commit message file has not been saved"
 fi
+}
 
+main
 
