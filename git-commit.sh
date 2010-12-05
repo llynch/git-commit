@@ -22,11 +22,12 @@ $scm status >> $tmpfile_commit_status
 parse_status() {
     status_file=$1
 
+
     cat $status_file | \
         grep -E "+modified:|+new file:|+deleted:|+renamed:|\+:.*" | \
         sed 's#\(.*\)->\(.*\)#\# renamed:\1\n\# renamed:\2#g' | \
-        sed 's/.*:\s*\(.*\)$/"\1";/g;' | \
-        xargs -I';' echo 
+        sed 's#\#\s*\S*:\s*\(.*\)$#\1#g' | \
+        sed -n '1,$H; $x; $s/\n/ /gp' # inline
 }
 
 main() {
