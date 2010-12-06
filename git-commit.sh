@@ -26,7 +26,7 @@ parse_status() {
     cat $status_file | \
         grep -E "+modified:|+new file:|+deleted:|+renamed:|\+:.*" | \
         sed 's#\(.*\)->\(.*\)#\# renamed:\1\n\# renamed:\2#g' | \
-        sed 's#\#\s*\S*:\s*\(.*\)$#\1#g' | \
+        sed 's#\#[^:]*:\s*\(.*\)$#\1#g' | \
         sed -n '1,$H; $x; $s/\n/ /gp' # inline
 }
 
@@ -50,7 +50,7 @@ then
   # now we launch the commit operation for every file marqued with 
   # D, A, M or +, then if the commit is successful we delete the 
   # message file
-  parse_status $tmpfile_commit_status
+  #parse_status $tmpfile_commit_status
   $scm commit -F $tmpfile_commit_message \
       $( parse_status $tmpfile_commit_status ) \
        && rm $tmpfile_commit_message
